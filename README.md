@@ -8,8 +8,9 @@
 
 <!-- Banner -->
 <p align="center">
+  <img src="./minigateway.png" alt="Mini Gateway Banner">
   <img src="./WhatsApp Image 2025-10-30 at 16.32.01_a80077b6.jpg" alt="Mini Gateway Banner">
-   <img src="./WhatsApp Image 2025-10-30 at 16.32.01_a80077b6.jpg" alt="Mini Gateway Banner">
+   <img src="./WhatsApp Image 2025-10-30 at 16.35.11_2198ca4e.jpg" alt="Mini Gateway Banner">
 </p>
 
 # Mini Gateway
