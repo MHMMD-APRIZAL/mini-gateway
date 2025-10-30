@@ -5,7 +5,7 @@
   - HTTP/HTTPS GET + POST JSON
   - Tampilkan JSON dan hasil parse "name/title"
   - Scan Wi-Fi sekitar & daftar klien DHCP (AP)
-  - Tanpa OLED
+  - ✅ DITAMBAHKAN OLED SSD1306 DISPLAY
 */
 
 #include <ESP8266WiFi.h>
@@ -14,10 +14,20 @@
 #include <WiFiClientSecure.h>
 #include <EEPROM.h>
 #include <ArduinoJson.h>
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
 
 extern "C" {
   #include <user_interface.h>
 }
+
+// ---------- OLED SETUP ----------
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+#define OLED_RESET -1
+#define SCREEN_ADDRESS 0x3C
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 // ---------- CONFIG ----------
 struct Config {
@@ -38,7 +48,7 @@ void loadConfig() {
   if (config.magic != CFG_MAGIC) {
     memset(&config, 0, sizeof(config));
     config.magic = CFG_MAGIC;
-    strcpy(config.ap_ssid, "SetupD1Mini");
+    strcpy(config.ap_ssid, "Kelompokkeren");
     strcpy(config.ap_pass, "12345678");
     strcpy(config.apiGet,  "https://jsonplaceholder.typicode.com/users/1");
     saveConfig();
@@ -54,6 +64,7 @@ unsigned long lastFetchMs = 0;
 // ---------- SERVER ----------
 ESP8266WebServer server(80);
 
+// ---------- HTML ----------
 String htmlHeader() {
   return F("<!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1'>"
            "<style>body{font-family:Arial;padding:16px;max-width:900px;margin:auto}"
@@ -86,6 +97,7 @@ String htmlStationTable() {
   return out;
 }
 
+// ---------- HALAMAN UTAMA ----------
 String htmlRoot() {
   String h = htmlHeader();
   h += F("<h2>Setup Wemos D1 mini</h2><form action='/save' method='GET'>");
@@ -196,6 +208,17 @@ void handleFetch() {
     lastParsedName = name;
   } else lastParsedName = String("Parse error: ") + err.c_str();
 
+  // --- Tampilkan di OLED juga ---
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 0);
+  display.println("Fetch Done!");
+  display.println("Code: " + String(code));
+  display.println("Name:");
+  display.println(lastParsedName);
+  display.display();
+
   server.sendHeader("Location", "/"); server.send(302);
 }
 
@@ -220,6 +243,21 @@ void startAP_STA() {
   Serial.printf("[AP] SSID:%s PASS:%s IP:%s\n",
                 config.ap_ssid, config.ap_pass, WiFi.softAPIP().toString().c_str());
 
+  // --- tampilkan di OLED ---
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 0);
+  display.println("AP: " + String(config.ap_ssid));
+  display.println("IP: " + WiFi.softAPIP().toString());
+  if (WiFi.status() == WL_CONNECTED) {
+    display.println("STA: OK");
+    display.println("STA IP: " + WiFi.localIP().toString());
+  } else {
+    display.println("STA: none");
+  }
+  display.display();
+
   server.on("/", handleRoot);
   server.on("/save", handleSave);
   server.on("/scan", handleScan);
@@ -231,6 +269,18 @@ void startAP_STA() {
 void setup() {
   Serial.begin(115200);
   EEPROM.begin(1024);
+  Wire.begin(D2, D1);
+  if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
+    Serial.println(F("SSD1306 failed"));
+    for(;;);
+  }
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(10, 20);
+  display.println("Booting...");
+  display.display();
+
   loadConfig();
   startAP_STA();
 }
